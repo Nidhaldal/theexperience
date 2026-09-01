@@ -1,0 +1,17 @@
+# Backend
+backend/.venv/
+backend/.env
+backend/__pycache__/
+backend/**/*.pyc
+
+# Frontend
+frontend/node_modules/
+frontend/dist/
+
+# Environment / secrets
+.env
+*.env
+
+# IDE
+.vscode/
+.idea/
