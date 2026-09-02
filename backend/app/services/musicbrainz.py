@@ -1,9 +1,11 @@
 import asyncio
+import time
 
 import httpx
 from fastapi import HTTPException
 
 from app.schemas.album import Album
+from app.services.normalization import normalize_artist, normalize_text
 
 
 MUSICBRAINZ_URL = "https://musicbrainz.org/ws/2/release-group"
@@ -12,17 +14,33 @@ HEADERS = {
     "User-Agent": "TheExperience/0.1.0 (personal-project)"
 }
 
+MIN_REQUEST_INTERVAL = 1.0
 
-async def search_albums(query: str) -> list[Album]:
-    params = {
-        "query": f'releasegroup:"{query}"',
-        "fmt": "json",
-        "limit": 10,
-    }
+_last_request_time = 0.0
+_request_lock = asyncio.Lock()
 
-    async with httpx.AsyncClient() as client:
-        for attempt in range(2):
-            try:
+
+async def _wait_for_rate_limit() -> None:
+    global _last_request_time
+
+    async with _request_lock:
+        current_time = time.monotonic()
+        elapsed = current_time - _last_request_time
+
+        if elapsed < MIN_REQUEST_INTERVAL:
+            await asyncio.sleep(
+                MIN_REQUEST_INTERVAL - elapsed
+            )
+
+        _last_request_time = time.monotonic()
+
+
+async def _request_musicbrainz(params: dict) -> dict:
+    for attempt in range(2):
+        await _wait_for_rate_limit()
+
+        try:
+            async with httpx.AsyncClient() as client:
                 response = await client.get(
                     MUSICBRAINZ_URL,
                     params=params,
@@ -30,65 +48,88 @@ async def search_albums(query: str) -> list[Album]:
                     timeout=10.0,
                 )
 
-                if response.status_code == 503:
-                    if attempt == 0:
-                        await asyncio.sleep(1)
-                        continue
+            if response.status_code == 503:
+                if attempt == 0:
+                    await asyncio.sleep(2)
+                    continue
 
-                    raise HTTPException(
-                        status_code=503,
-                        detail="MusicBrainz is temporarily unavailable. Please try again later.",
-                    )
-
-                response.raise_for_status()
-                break
-
-            except httpx.TimeoutException:
-                raise HTTPException(
-                    status_code=504,
-                    detail="MusicBrainz request timed out.",
-                )
-
-            except httpx.RequestError:
                 raise HTTPException(
                     status_code=503,
-                    detail="Could not connect to MusicBrainz.",
+                    detail=(
+                        "MusicBrainz is temporarily unavailable. "
+                        "Please try again later."
+                    ),
                 )
 
-    data = response.json()
+            response.raise_for_status()
 
-    albums = []
+            return response.json()
 
-    for release_group in data.get("release-groups", []):
-        artist_credit = release_group.get("artist-credit", [])
+        except httpx.TimeoutException:
+            raise HTTPException(
+                status_code=504,
+                detail="MusicBrainz request timed out.",
+            )
 
-        if not artist_credit:
-            continue
+        except httpx.RequestError:
+            raise HTTPException(
+                status_code=503,
+                detail="Could not connect to MusicBrainz.",
+            )
 
-        artist = artist_credit[0].get("name")
 
-        if not artist:
-            continue
+def _select_best_release_group(
+    release_groups: list[dict],
+    title: str,
+    artist: str,
+) -> dict | None:
+    normalized_title = normalize_text(title)
+    normalized_artist = normalize_artist(artist)
 
-        first_release_date = release_group.get("first-release-date")
-        year = None
+    candidates = []
 
-        if first_release_date:
-            try:
-                year = int(first_release_date[:4])
-            except ValueError:
-                year = None
-
-        album = Album(
-            id=release_group["id"],
-            title=release_group["title"],
-            artist=artist,
-            year=year,
+    for release_group in release_groups:
+        release_group_title = normalize_text(
+            release_group.get("title", "")
         )
 
-        albums.append(album)
+        artist_credit = release_group.get("artist-credit", [])
 
-    return albums
+        release_group_artist = normalize_artist(
+    artist_credit[0].get("name", "")
+    if artist_credit
+    else ""
+)
+
+        if release_group_title != normalized_title:
+            continue
+
+        if release_group_artist != normalized_artist:
+            continue
+
+        primary_type = release_group.get(
+            "primary-type",
+            ""
+        )
+
+        if primary_type != "Album":
+            continue
+
+        candidates.append(release_group)
+
+    if not candidates:
+        return None
+
+    return max(
+        candidates,
+        key=lambda release_group: (
+            release_group.get("score", 0),
+            release_group.get(
+                "first-release-date",
+                "",
+            ),
+        ),
+    )
 
 
 async def find_album(
@@ -96,56 +137,60 @@ async def find_album(
     artist: str,
 ) -> Album | None:
     params = {
-        "query": f'releasegroup:"{title}" AND artist:"{artist}"',
+        "query": (
+            f'releasegroup:"{title}" '
+            f'AND artist:"{artist}"'
+        ),
         "fmt": "json",
-        "limit": 1,
+        "limit": 10,
     }
 
-    async with httpx.AsyncClient() as client:
-        for attempt in range(2):
-            try:
-                response = await client.get(
-                    MUSICBRAINZ_URL,
-                    params=params,
-                    headers=HEADERS,
-                    timeout=10.0,
-                )
+    data = await _request_musicbrainz(params)
 
-                if response.status_code == 503:
-                    if attempt == 0:
-                        await asyncio.sleep(1)
-                        continue
-
-                    raise HTTPException(
-                        status_code=503,
-                        detail="MusicBrainz is temporarily unavailable. Please try again later.",
-                    )
-
-                response.raise_for_status()
-                break
-
-            except httpx.TimeoutException:
-                raise HTTPException(
-                    status_code=504,
-                    detail="MusicBrainz request timed out.",
-                )
-
-            except httpx.RequestError:
-                raise HTTPException(
-                    status_code=503,
-                    detail="Could not connect to MusicBrainz.",
-                )
-
-    data = response.json()
-
-    release_groups = data.get("release-groups", [])
+    release_groups = data.get(
+        "release-groups",
+        [],
+    )
 
     if not release_groups:
         return None
 
-    release_group = release_groups[0]
+    release_group = _select_best_release_group(
+        release_groups,
+        title,
+        artist,
+    )
 
-    first_release_date = release_group.get("first-release-date")
+    if not release_group:
+        return None
+
+    release_group_id = release_group.get(
+        "id",
+        "",
+    )
+
+    release_group_title = release_group.get(
+        "title",
+        title,
+    )
+
+    artist_name = artist
+
+    artist_credit = release_group.get(
+        "artist-credit",
+        [],
+    )
+
+    if artist_credit:
+        artist_name = artist_credit[0].get(
+            "name",
+            artist,
+        )
+
+    first_release_date = release_group.get(
+        "first-release-date"
+    )
+
     year = None
 
     if first_release_date:
@@ -154,16 +199,9 @@ async def find_album(
         except ValueError:
             year = None
 
-    artist_credit = release_group.get("artist-credit", [])
-
-    artist_name = artist
-
-    if artist_credit:
-        artist_name = artist_credit[0].get("name", artist)
-
     return Album(
-        id=release_group["id"],
-        title=release_group["title"],
+        id=release_group_id,
+        title=release_group_title,
         artist=artist_name,
         year=year,
     )
