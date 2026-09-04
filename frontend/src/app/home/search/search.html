@@ -1,0 +1,58 @@
+<div class="search-container">
+
+  <div class="search-box">
+    <input
+      type="text"
+      placeholder="What are you experiencing today ... in terms of albums ?"
+      [formControl]="query"
+      (keyup.enter)="search()"
+    />
+
+    <button (click)="search()" aria-label="Search">
+      →
+    </button>
+  </div>
+
+  @if (suggestions().length > 0) {
+    <div class="suggestions">
+
+      @for (album of suggestions(); track $index) {
+        <button
+          class="suggestion"
+          type="button"
+          (click)="selectAlbum(album)"
+        >
+          <span class="suggestion-title">
+            {{ album.title }}
+          </span>
+
+          <span class="suggestion-artist">
+            {{ album.artist }}
+          </span>
+        </button>
+      }
+
+    </div>
+  }
+
+</div>
+
+@if (albums().length > 0) {
+  <div class="results">
+
+    @for (album of albums(); track $index) {
+      <div class="result">
+        @if (album.cover_url) {
+          <img [src]="album.cover_url" [alt]="album.title">
+        }
+
+        <div>
+          <h2>{{ album.title }}</h2>
+          <p>{{ album.artist }}</p>
+          <p>{{ album.year }}</p>
+        </div>
+      </div>
+    }
+
+  </div>
+}

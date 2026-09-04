@@ -1,7 +1,5 @@
-<h1>The Experience</h1>
-
-<p>Angular is running ✅</p>
-
-<p>Backend status: {{ backendStatus() }}</p>
-
-<router-outlet />
+@if (appState.selectedAlbum(); as album) {
+  <app-album-experience />
+} @else {
+  <app-home />
+}

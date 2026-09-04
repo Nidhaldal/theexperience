@@ -1,0 +1,61 @@
+@if (appState.selectedAlbum(); as album) {
+
+  <div class="experience">
+
+    <header class="experience-header">
+      <span>THE EXPERIENCE</span>
+
+      <button
+        type="button"
+        aria-label="Close experience"
+        (click)="exit()"
+      >
+        ×
+      </button>
+    </header>
+
+    @if (isLoading()) {
+
+      <main class="experience-content loading-state">
+        <app-experience-loading />
+      </main>
+
+    } @else if (error()) {
+
+      <main class="experience-content loading-state">
+        <p>{{ error() }}</p>
+      </main>
+
+    } @else {
+
+      <main class="experience-content">
+
+        <div class="artwork">
+          <img
+            [src]="album.cover_url"
+            [alt]="album.title"
+          >
+        </div>
+
+        <section class="album-info">
+          <p class="eyebrow">ALBUM EXPERIENCE</p>
+
+          <h1>{{ album.title }}</h1>
+
+          <h2>{{ album.artist }}</h2>
+
+          <p class="year">{{ album.year }}</p>
+
+          <div class="stats">
+            <span>{{ album.listeners }} listeners</span>
+            <span>{{ album.playcount }} plays</span>
+          </div>
+        </section>
+
+      </main>
+
+    }
+
+  </div>
+
+}
