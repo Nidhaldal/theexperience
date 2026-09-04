@@ -5,7 +5,7 @@ from fastapi import HTTPException
 
 from app.services.musicbrainz import (
     _select_best_release_group,
-    find_album,
+    find_album
 )
 
 
@@ -223,8 +223,7 @@ async def test_find_album_returns_album():
     assert result.title == "Thriller"
     assert result.artist == "Michael Jackson"
     assert result.year == 1982
-
-
+    
 @pytest.mark.asyncio
 async def test_find_album_returns_none_when_no_release_groups():
     import app.services.musicbrainz

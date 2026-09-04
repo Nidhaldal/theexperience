@@ -9,9 +9,8 @@ class Album(BaseModel):
     listeners: int = 0
     playcount: int = 0
     cover_url: str | None = None
+    release_id: str | None = None
 
-    
-    
 
 class AlbumSearchResponse(BaseModel):
     results: list[Album]
