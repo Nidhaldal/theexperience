@@ -1,0 +1,1350 @@
+.discovery {
+  position: relative;
+
+  min-height: 100vh;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  padding: 48px;
+
+  overflow: hidden;
+
+  background:
+    radial-gradient(
+      ellipse at 50% 45%,
+      rgba(105, 78, 145, 0.18),
+      transparent 42%
+    ),
+    radial-gradient(
+      ellipse at 12% 18%,
+      rgba(75, 105, 165, 0.12),
+      transparent 38%
+    ),
+    radial-gradient(
+      ellipse at 88% 82%,
+      rgba(155, 75, 115, 0.11),
+      transparent 40%
+    ),
+    #0d0c12;
+
+  color: rgba(255, 255, 255, 0.9);
+
+  isolation: isolate;
+}
+
+
+/* =========================================================
+   ATMOSPHERIC BACKGROUND
+   ========================================================= */
+
+.discovery::before,
+.discovery::after {
+  content: '';
+
+  position: absolute;
+
+  pointer-events: none;
+
+  border-radius: 50%;
+
+  mix-blend-mode: screen;
+
+  filter: blur(100px);
+
+  z-index: -2;
+}
+
+.discovery::before {
+  width: 70vw;
+  height: 70vw;
+
+  top: -42%;
+  left: -18%;
+
+  background:
+    radial-gradient(
+      circle,
+      rgba(115, 82, 165, 0.22),
+      rgba(80, 95, 150, 0.08) 38%,
+      transparent 70%
+    );
+
+  animation:
+    discoveryAtmosphereOne
+    18s
+    ease-in-out
+    infinite alternate;
+}
+
+.discovery::after {
+  width: 65vw;
+  height: 65vw;
+
+  right: -25%;
+  bottom: -40%;
+
+  background:
+    radial-gradient(
+      circle,
+      rgba(150, 70, 110, 0.18),
+      rgba(70, 90, 155, 0.08) 38%,
+      transparent 70%
+    );
+
+  animation:
+    discoveryAtmosphereTwo
+    22s
+    ease-in-out
+    infinite alternate;
+}
+
+@keyframes discoveryAtmosphereOne {
+  0% {
+    transform:
+      translate3d(-3vw, -2vh, 0)
+      scale(0.9);
+  }
+
+  50% {
+    transform:
+      translate3d(7vw, 7vh, 0)
+      scale(1.08);
+  }
+
+  100% {
+    transform:
+      translate3d(16vw, 3vh, 0)
+      scale(1.18);
+  }
+}
+
+@keyframes discoveryAtmosphereTwo {
+  0% {
+    transform:
+      translate3d(4vw, 3vh, 0)
+      scale(0.9);
+  }
+
+  50% {
+    transform:
+      translate3d(-8vw, -6vh, 0)
+      scale(1.08);
+  }
+
+  100% {
+    transform:
+      translate3d(-16vw, -10vh, 0)
+      scale(1.18);
+  }
+}
+
+
+/* =========================================================
+   FINE ATMOSPHERIC HAZE
+   ========================================================= */
+
+.discovery-content::after {
+  content: '';
+
+  position: fixed;
+
+  width: 65vw;
+  height: 65vw;
+
+  left: 50%;
+  top: 48%;
+
+  transform:
+    translate(-50%, -50%);
+
+  border-radius: 50%;
+
+  background:
+    radial-gradient(
+      circle,
+      rgba(175, 135, 205, 0.055),
+      rgba(100, 120, 175, 0.025) 32%,
+      transparent 68%
+    );
+
+  filter: blur(80px);
+
+  pointer-events: none;
+
+  z-index: -1;
+}
+
+
+/* =========================================================
+   CONTENT
+   ========================================================= */
+
+.discovery-content {
+  position: relative;
+
+  width: min(900px, 90vw);
+
+  z-index: 2;
+}
+
+
+/* =========================================================
+   HERO LABEL
+   ========================================================= */
+
+.discovery-content::before {
+  content: 'THE EXPERIENCE';
+
+  display: block;
+
+  margin-bottom: 21px;
+
+  color:
+    rgba(255, 255, 255, 0.36);
+
+  font-size: 9px;
+
+  font-weight: 600;
+
+  letter-spacing: 0.34em;
+
+  animation:
+    discoveryFadeUp
+    900ms
+    ease
+    both;
+}
+
+
+/* =========================================================
+   HERO TITLE
+   ========================================================= */
+
+.discovery h1 {
+  max-width: 850px;
+
+  margin: 0 0 43px;
+
+  font-size:
+    clamp(58px, 9vw, 112px);
+
+  line-height: 0.89;
+
+  font-weight: 420;
+
+  letter-spacing: -0.065em;
+
+  color:
+    rgba(255, 255, 255, 0.95);
+
+  text-wrap: balance;
+
+  text-shadow:
+    0 0 70px rgba(165, 135, 205, 0.08);
+
+  animation:
+    discoveryFadeUp
+    900ms
+    100ms
+    ease
+    both;
+}
+
+
+/* =========================================================
+   SEARCH
+   ========================================================= */
+
+.search {
+  position: relative;
+
+  display: flex;
+  align-items: center;
+
+  width: min(720px, 100%);
+  height: 68px;
+
+  border:
+    1px solid rgba(255, 255, 255, 0.13);
+
+  border-radius: 15px;
+
+  background:
+    linear-gradient(
+      105deg,
+      rgba(28, 24, 36, 0.58),
+      rgba(16, 18, 27, 0.48)
+    );
+
+  box-shadow:
+    0 25px 90px rgba(0, 0, 0, 0.28),
+    0 0 90px rgba(125, 95, 165, 0.08),
+    inset 0 1px 0 rgba(255, 255, 255, 0.045);
+
+  backdrop-filter: blur(26px);
+  -webkit-backdrop-filter: blur(26px);
+
+  transition:
+    border-color 300ms ease,
+    background 300ms ease,
+    box-shadow 300ms ease,
+    transform 300ms ease;
+
+  animation:
+    discoveryFadeUp
+    900ms
+    180ms
+    ease
+    both;
+}
+
+.search::before {
+  content: '';
+
+  position: absolute;
+
+  inset: 0;
+
+  border-radius: inherit;
+
+  background:
+    linear-gradient(
+      110deg,
+      rgba(155, 115, 195, 0.08),
+      transparent 35%,
+      rgba(85, 115, 180, 0.055)
+    );
+
+  pointer-events: none;
+}
+
+.search:hover {
+  border-color:
+    rgba(255, 255, 255, 0.18);
+
+  background:
+    linear-gradient(
+      105deg,
+      rgba(31, 27, 40, 0.64),
+      rgba(18, 20, 30, 0.54)
+    );
+}
+
+.search:focus-within {
+  border-color:
+    rgba(255, 255, 255, 0.25);
+
+  background:
+    linear-gradient(
+      105deg,
+      rgba(34, 29, 43, 0.68),
+      rgba(20, 22, 33, 0.58)
+    );
+
+  box-shadow:
+    0 30px 100px rgba(0, 0, 0, 0.34),
+    0 0 100px rgba(140, 105, 180, 0.13),
+    inset 0 1px 0 rgba(255, 255, 255, 0.055);
+
+  transform:
+    translateY(-1px);
+}
+
+.search input {
+  position: relative;
+
+  z-index: 1;
+
+  flex: 1;
+
+  min-width: 0;
+
+  height: 100%;
+
+  padding: 0 22px;
+
+  border: 0;
+  outline: 0;
+
+  background: transparent;
+
+  color:
+    rgba(255, 255, 255, 0.93);
+
+  font-family: inherit;
+
+  font-size: 15px;
+
+  font-weight: 400;
+}
+
+.search input::placeholder {
+  color:
+    rgba(255, 255, 255, 0.34);
+}
+
+.search button {
+  position: relative;
+
+  z-index: 1;
+
+  width: 50px;
+  height: 50px;
+
+  flex-shrink: 0;
+
+  margin-right: 8px;
+
+  border:
+    1px solid rgba(255, 255, 255, 0.1);
+
+  border-radius: 10px;
+
+  background:
+    rgba(255, 255, 255, 0.065);
+
+  color:
+    rgba(255, 255, 255, 0.7);
+
+  font-family: inherit;
+
+  font-size: 21px;
+
+  font-weight: 300;
+
+  cursor: pointer;
+
+  transition:
+    background 200ms ease,
+    color 200ms ease,
+    border-color 200ms ease,
+    transform 200ms ease,
+    box-shadow 200ms ease;
+}
+
+.search button:hover {
+  background:
+    rgba(255, 255, 255, 0.12);
+
+  border-color:
+    rgba(255, 255, 255, 0.17);
+
+  color:
+    rgba(255, 255, 255, 0.96);
+
+  box-shadow:
+    0 0 28px rgba(160, 125, 195, 0.14);
+
+  transform:
+    translateX(2px);
+}
+
+.search button:active {
+  transform:
+    translateX(3px)
+    scale(0.96);
+}
+
+
+/* =========================================================
+   SEARCH HINT
+   ========================================================= */
+
+.search::after {
+  content: 'ENTER TO EXPLORE';
+
+  position: absolute;
+
+  top:
+    calc(100% + 15px);
+
+  right: 2px;
+
+  color:
+    rgba(255, 255, 255, 0.2);
+
+  font-size: 8px;
+
+  font-weight: 600;
+
+  letter-spacing: 0.22em;
+
+  pointer-events: none;
+
+  transition:
+    color 250ms ease;
+}
+
+.search:focus-within::after {
+  color:
+    rgba(255, 255, 255, 0.32);
+}
+
+
+/* =========================================================
+   LOADING STATE
+   ========================================================= */
+
+.search-status {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+
+  width: min(720px, 100%);
+
+  margin-top: 28px;
+
+  color:
+    rgba(255, 255, 255, 0.3);
+
+  font-size: 9px;
+
+  font-weight: 600;
+
+  letter-spacing: 0.22em;
+
+  text-transform: uppercase;
+
+  animation:
+    discoveryStatusIn
+    400ms
+    ease
+    both;
+}
+
+.search-status::before {
+  content: '';
+
+  width: 8px;
+  height: 8px;
+
+  flex-shrink: 0;
+
+  border:
+    1px solid rgba(255, 255, 255, 0.28);
+
+  border-top-color:
+    rgba(190, 150, 220, 0.9);
+
+  border-radius: 50%;
+
+  box-shadow:
+    0 0 14px rgba(170, 125, 205, 0.28);
+
+  animation:
+    discoveryLoaderSpin
+    900ms
+    linear
+    infinite;
+}
+
+@keyframes discoveryLoaderSpin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@keyframes discoveryStatusIn {
+  from {
+    opacity: 0;
+
+    transform:
+      translateY(-5px);
+  }
+
+  to {
+    opacity: 1;
+
+    transform:
+      translateY(0);
+  }
+}
+
+
+/* =========================================================
+   RESULTS
+   ========================================================= */
+
+.results,
+.recent,
+.might-like {
+  width: min(720px, 100%);
+}
+
+.results {
+  display: flex;
+  flex-direction: column;
+
+  gap: 3px;
+
+  margin-top: 29px;
+
+  animation:
+    discoveryResultsIn
+    400ms
+    ease
+    both;
+}
+
+@keyframes discoveryResultsIn {
+  from {
+    opacity: 0;
+
+    transform:
+      translateY(-8px);
+  }
+
+  to {
+    opacity: 1;
+
+    transform:
+      translateY(0);
+  }
+}
+
+.result,
+.recent-album,
+.might-like-album {
+  display: flex;
+  align-items: center;
+
+  width: 100%;
+
+  border:
+    1px solid transparent;
+
+  border-radius: 11px;
+
+  background:
+    rgba(255, 255, 255, 0.008);
+
+  color: inherit;
+
+  text-align: left;
+
+  cursor: pointer;
+
+  transition:
+    background 200ms ease,
+    border-color 200ms ease,
+    transform 200ms ease,
+    box-shadow 200ms ease;
+}
+
+.result {
+  padding: 9px;
+}
+
+.result:hover,
+.recent-album:hover,
+.might-like-album:hover {
+  background:
+    rgba(255, 255, 255, 0.055);
+
+  border-color:
+    rgba(255, 255, 255, 0.08);
+
+  transform:
+    translateX(5px);
+}
+
+.result:focus-visible,
+.recent-album:focus-visible,
+.might-like-album:focus-visible {
+  outline: none;
+
+  background:
+    rgba(255, 255, 255, 0.065);
+
+  border-color:
+    rgba(190, 155, 220, 0.34);
+
+  box-shadow:
+    0 0 0 2px rgba(150, 110, 185, 0.12);
+
+  transform:
+    translateX(5px);
+}
+
+.result-active {
+  background:
+    rgba(255, 255, 255, 0.07);
+
+  border-color:
+    rgba(255, 255, 255, 0.11);
+
+  transform:
+    translateX(5px);
+
+  box-shadow:
+    0 8px 30px rgba(0, 0, 0, 0.12);
+}
+
+
+/* =========================================================
+   COVERS
+   ========================================================= */
+
+.result-cover,
+.recent-cover,
+.result-cover-placeholder,
+.recent-cover-placeholder,
+.might-like-cover,
+.might-like-cover-placeholder {
+  flex-shrink: 0;
+
+  width: 52px;
+  height: 52px;
+
+  border-radius: 6px;
+
+  object-fit: cover;
+}
+
+.result-cover,
+.recent-cover,
+.might-like-cover {
+  box-shadow:
+    0 10px 28px rgba(0, 0, 0, 0.42);
+
+  transition:
+    transform 250ms ease,
+    box-shadow 250ms ease;
+}
+
+.result:hover .result-cover,
+.recent-album:hover .recent-cover,
+.might-like-album:hover .might-like-cover {
+  transform:
+    scale(1.04);
+
+  box-shadow:
+    0 12px 34px rgba(0, 0, 0, 0.52);
+}
+
+.result-cover-placeholder,
+.recent-cover-placeholder,
+.might-like-cover-placeholder {
+  background:
+    linear-gradient(
+      135deg,
+      rgba(255, 255, 255, 0.06),
+      rgba(255, 255, 255, 0.025)
+    );
+}
+
+
+/* =========================================================
+   RESULT INFORMATION
+   ========================================================= */
+
+.result-info {
+  display: flex;
+  flex-direction: column;
+
+  min-width: 0;
+
+  margin-left: 15px;
+}
+
+.result-title {
+  overflow: hidden;
+
+  color:
+    rgba(255, 255, 255, 0.88);
+
+  font-size: 14px;
+
+  font-weight: 450;
+
+  letter-spacing: -0.005em;
+
+  text-overflow: ellipsis;
+
+  white-space: nowrap;
+}
+
+.result-artist {
+  margin-top: 5px;
+
+  overflow: hidden;
+
+  color:
+    rgba(255, 255, 255, 0.38);
+
+  font-size: 12px;
+
+  text-overflow: ellipsis;
+
+  white-space: nowrap;
+}
+
+
+/* =========================================================
+   RECENTLY EXPERIENCED
+   ========================================================= */
+
+.recent {
+  margin-top: 58px;
+
+  animation:
+    discoveryFadeUp
+    800ms
+    250ms
+    ease
+    both;
+}
+
+.recent-label,
+.might-like-label {
+  margin: 0 0 15px;
+
+  color:
+    rgba(255, 255, 255, 0.28);
+
+  font-size: 9px;
+
+  font-weight: 600;
+
+  letter-spacing: 0.3em;
+}
+
+.recent-album {
+  padding: 9px;
+
+  border-radius: 10px;
+
+  transition:
+    transform 300ms cubic-bezier(0.22, 1, 0.36, 1),
+    background 300ms ease,
+    box-shadow 300ms ease;
+}
+
+.recent-album:hover {
+  background: rgba(255, 255, 255, 0.035);
+
+  transform:
+    translateY(-3px);
+
+  box-shadow:
+    0 12px 30px rgba(0, 0, 0, 0.18);
+}
+.recent-cover {
+  transition:
+    transform 350ms cubic-bezier(0.22, 1, 0.36, 1),
+    filter 350ms ease;
+}
+
+.recent-album:hover .recent-cover {
+  transform: scale(1.04);
+  filter: brightness(1.08);
+}
+.recent-album:hover .result-title {
+  color: rgba(255, 255, 255, 0.95);
+}
+
+.recent-album:hover .result-artist {
+  color: rgba(255, 255, 255, 0.45);
+}
+
+/* =========================================================
+   YOU MIGHT ALSO LIKE
+   Future recommendation section
+   ========================================================= */
+
+.might-like {
+  margin-top: 58px;
+
+  animation:
+    discoveryFadeUp
+    800ms
+    350ms
+    ease
+    both;
+}
+
+.might-like-list {
+  display: grid;
+
+  grid-template-columns:
+    repeat(3, minmax(0, 1fr));
+
+  gap: 8px;
+}
+
+.might-like-album {
+  flex-direction: column;
+
+  align-items: flex-start;
+
+  padding: 8px;
+}
+
+.might-like-cover,
+.might-like-cover-placeholder {
+  width: 100%;
+  height: auto;
+
+  aspect-ratio: 1;
+
+  border-radius: 7px;
+}
+
+.might-like-info {
+  width: 100%;
+
+  min-width: 0;
+
+  padding:
+    10px
+    3px
+    3px;
+}
+
+.might-like-title {
+  display: block;
+
+  overflow: hidden;
+
+  color:
+    rgba(255, 255, 255, 0.82);
+
+  font-size: 12px;
+
+  text-overflow: ellipsis;
+
+  white-space: nowrap;
+}
+
+.might-like-artist {
+  display: block;
+
+  margin-top: 4px;
+
+  overflow: hidden;
+
+  color:
+    rgba(255, 255, 255, 0.32);
+
+  font-size: 10px;
+
+  text-overflow: ellipsis;
+
+  white-space: nowrap;
+}
+
+
+/* =========================================================
+   GENERAL ENTRANCE ANIMATION
+   ========================================================= */
+
+@keyframes discoveryFadeUp {
+  from {
+    opacity: 0;
+
+    transform:
+      translateY(18px);
+  }
+
+  to {
+    opacity: 1;
+
+    transform:
+      translateY(0);
+  }
+}
+
+
+/* =========================================================
+   MOBILE
+   ========================================================= */
+
+@media (max-width: 700px) {
+  .discovery {
+    align-items: flex-start;
+
+    padding:
+      24vh
+      24px
+      40px;
+  }
+
+  .discovery-content {
+    width: 100%;
+  }
+
+  .discovery-content::before {
+    margin-bottom: 18px;
+
+    font-size: 8px;
+  }
+
+  .discovery h1 {
+    margin-bottom: 34px;
+
+    font-size:
+      clamp(52px, 15vw, 76px);
+  }
+
+  .search {
+    height: 60px;
+  }
+
+  .search button {
+    width: 46px;
+    height: 46px;
+
+    margin-right: 6px;
+  }
+
+  .search::after {
+    top:
+      calc(100% + 12px);
+
+    font-size: 7px;
+  }
+
+  .results {
+    margin-top: 26px;
+  }
+
+  .recent,
+  .might-like {
+    margin-top: 46px;
+  }
+
+  .result-cover,
+  .recent-cover,
+  .result-cover-placeholder,
+  .recent-cover-placeholder {
+    width: 46px;
+    height: 46px;
+  }
+
+  .might-like-list {
+    grid-template-columns:
+      repeat(2, minmax(0, 1fr));
+  }
+}
+
+
+/* =========================================================
+   REDUCED MOTION
+   ========================================================= */
+
+@media (prefers-reduced-motion: reduce) {
+  .discovery::before,
+  .discovery::after,
+  .discovery-content::before,
+  .discovery-content::after,
+  .discovery h1,
+  .search,
+  .recent,
+  .results,
+  .might-like,
+  .search-status,
+  .search-status::before {
+    animation: none;
+  }
+
+  .search,
+  .result,
+  .recent-album,
+  .might-like-album,
+  .result-cover,
+  .recent-cover,
+  .might-like-cover {
+    transition: none;
+  }
+}
+
+/* =========================================================
+   EXPERIENCE LOADER
+   ========================================================= */
+
+.discovery-loading {
+  position: relative;
+}
+
+.experience-loader {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+
+  text-align: center;
+
+  animation:
+    discoveryLoaderIn
+    700ms
+    ease
+    both;
+}
+
+.experience-loader-orbit {
+  position: relative;
+
+  width: 58px;
+  height: 58px;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  border:
+    1px solid rgba(255, 255, 255, 0.14);
+
+  border-radius: 50%;
+
+  box-shadow:
+    0 0 35px rgba(150, 110, 190, 0.12);
+
+  animation:
+    experienceOrbit
+    2.8s
+    cubic-bezier(0.45, 0, 0.55, 1)
+    infinite;
+}
+
+.experience-loader-orbit::before {
+  content: '';
+
+  position: absolute;
+
+  inset: 7px;
+
+  border:
+    1px solid rgba(255, 255, 255, 0.08);
+
+  border-radius: 50%;
+
+  border-top-color:
+    rgba(190, 150, 220, 0.7);
+
+  border-right-color:
+    rgba(120, 145, 200, 0.35);
+}
+
+.experience-loader-orbit::after {
+  content: '';
+
+  position: absolute;
+
+  width: 5px;
+  height: 5px;
+
+  top: -3px;
+  left: 50%;
+
+  margin-left: -2.5px;
+
+  border-radius: 50%;
+
+  background:
+    rgba(220, 195, 235, 0.95);
+
+  box-shadow:
+    0 0 12px rgba(200, 165, 225, 0.8),
+    0 0 26px rgba(160, 120, 200, 0.35);
+}
+
+.experience-loader-core {
+  width: 11px;
+  height: 11px;
+
+  border-radius: 50%;
+
+  background:
+    rgba(210, 185, 225, 0.9);
+
+  box-shadow:
+    0 0 16px rgba(190, 145, 215, 0.8),
+    0 0 35px rgba(140, 100, 175, 0.35);
+
+  animation:
+    experienceCore
+    1.8s
+    ease-in-out
+    infinite;
+}
+
+.experience-loader-message {
+  margin: 26px 0 0;
+
+  color:
+    rgba(255, 255, 255, 0.42);
+
+  font-size: 9px;
+
+  font-weight: 600;
+
+  letter-spacing: 0.3em;
+
+  text-indent: 0.3em;
+}
+
+@keyframes experienceOrbit {
+  0% {
+    transform:
+      rotate(0deg)
+      scale(0.92);
+  }
+
+  50% {
+    transform:
+      rotate(180deg)
+      scale(1.04);
+  }
+
+  100% {
+    transform:
+      rotate(360deg)
+      scale(0.92);
+  }
+}
+
+@keyframes experienceCore {
+  0%,
+  100% {
+    transform: scale(0.75);
+    opacity: 0.55;
+  }
+
+  50% {
+    transform: scale(1.15);
+    opacity: 1;
+  }
+}
+
+@keyframes discoveryLoaderIn {
+  from {
+    opacity: 0;
+
+    transform:
+      translateY(10px)
+      scale(0.97);
+  }
+
+  to {
+    opacity: 1;
+
+    transform:
+      translateY(0)
+      scale(1);
+  }
+}
+
+
+/* =========================================================
+   SEARCH LOADER
+   ========================================================= */
+
+.search-status {
+  display: flex;
+  align-items: center;
+
+  gap: 11px;
+
+  width: min(720px, 100%);
+
+  margin-top: 28px;
+
+  color:
+    rgba(255, 255, 255, 0.3);
+
+  font-size: 9px;
+
+  font-weight: 600;
+
+  letter-spacing: 0.22em;
+
+  text-transform: uppercase;
+}
+
+.search-status-loader {
+  width: 8px;
+  height: 8px;
+
+  flex-shrink: 0;
+
+  border:
+    1px solid rgba(255, 255, 255, 0.2);
+
+  border-top-color:
+    rgba(190, 150, 220, 0.9);
+
+  border-radius: 50%;
+
+  box-shadow:
+    0 0 12px rgba(170, 125, 205, 0.25);
+
+  animation:
+    discoveryLoaderSpin
+    800ms
+    linear
+    infinite;
+}
+
+@keyframes discoveryLoaderSpin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+
+/* =========================================================
+   DISABLED SEARCH BUTTON
+   ========================================================= */
+
+.search button:disabled {
+  opacity: 0.35;
+
+  cursor: default;
+
+  transform: none;
+}
+
+.search button:disabled:hover {
+  background:
+    rgba(255, 255, 255, 0.065);
+
+  border-color:
+    rgba(255, 255, 255, 0.1);
+
+  box-shadow: none;
+}
+
+
+/* =========================================================
+   KEYBOARD FOCUS
+   ========================================================= */
+
+.result:focus-visible,
+.recent-album:focus-visible {
+  outline: none;
+
+  background:
+    rgba(255, 255, 255, 0.065);
+
+  border-color:
+    rgba(190, 155, 220, 0.35);
+
+  box-shadow:
+    0 0 0 2px rgba(150, 110, 185, 0.12);
+}
+
+
+/* =========================================================
+   REDUCED MOTION
+   ========================================================= */
+
+@media (prefers-reduced-motion: reduce) {
+  .experience-loader,
+  .experience-loader-orbit,
+  .experience-loader-core,
+  .search-status-loader {
+    animation: none;
+  }
+}
