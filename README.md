@@ -119,6 +119,41 @@ The lighting system is intentionally separated from the color extraction layer s
 * MusicBrainz — music metadata and release information
 * Cover Art Archive — album artwork
 
+## Experience Preview
+
+TheExperience turns an album into a visual experience driven by its artwork and extracted color palette.
+
+### Discovery
+
+Search for albums and revisit recently experienced albums directly from the discovery screen.
+
+![TheExperience discovery screen](./assets/mainscreen.png)
+
+### Album Experiences
+
+Each album generates its own visual environment based on its artwork and extracted colors.
+
+**Graduation**
+
+![Graduation album experience](./assets/graduation.png)
+
+**Animals**
+
+![Animals album experience](./assets/animals.png)
+
+### Lighting Controls
+
+Switch between different lighting modes and control the intensity, motion, and ambience of the experience.
+
+![TheExperience lighting controls](./assets/control.png)
+
+### Album Information & Color Extraction
+
+The experience exposes the album's metadata alongside the extracted visual palette used by the lighting engine.
+
+![Album information and extracted colors](./assets/infro.png)
+
+
 ## Architecture
 
 The project uses a shared backend with two independent frontend implementations.
