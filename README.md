@@ -151,7 +151,7 @@ Switch between different lighting modes and control the intensity, motion, and a
 
 The experience exposes the album's metadata alongside the extracted visual palette used by the lighting engine.
 
-![Album information and extracted colors](./assets/infro.png)
+![Album information and extracted colors](./assets/info.png)
 
 
 ## Architecture
