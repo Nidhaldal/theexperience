@@ -1,4 +1,3 @@
-import asyncio
 import os
 import time
 
@@ -8,12 +7,43 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
+
 LASTFM_URL = "https://ws.audioscrobbler.com/2.0/"
 LASTFM_API_KEY = os.getenv("LASTFM_API_KEY")
 
 LASTFM_SEARCH_LIMIT = 30
 LASTFM_RESULT_LIMIT = 6
 LASTFM_TIMEOUT = 10.0
+
+# Reuse one HTTP client so connections can be reused.
+LASTFM_CLIENT = httpx.AsyncClient(
+    timeout=LASTFM_TIMEOUT,
+)
+
+# --------------------------------------------------
+# Search cache
+# --------------------------------------------------
+
+# query -> (cached_at, results)
+_search_cache: dict[
+    str,
+    tuple[float, list[dict]],
+] = {}
+
+_SEARCH_CACHE_TTL = 60 * 5
+
+
+# --------------------------------------------------
+# Popularity cache
+# --------------------------------------------------
+
+# (title, artist) -> (cached_at, (listeners, playcount))
+_popularity_cache: dict[
+    tuple[str, str],
+    tuple[float, tuple[int, int]],
+] = {}
+
+_POPULARITY_CACHE_TTL = 60 * 15
 
 
 async def get_album_popularity(
@@ -24,12 +54,40 @@ async def get_album_popularity(
     Fetch listeners and playcount for a specific album.
 
     This is used when the user opens/selects an album,
-    not during autocomplete.
+    not during autocomplete/search.
     """
 
     if not LASTFM_API_KEY:
         return 0, 0
 
+    cache_key = (
+        title.strip().casefold(),
+        artist.strip().casefold(),
+    )
+
+    cached = _popularity_cache.get(
+        cache_key
+    )
+
+    if cached:
+        cached_at, popularity = cached
+
+        if (
+            time.time() - cached_at
+            < _POPULARITY_CACHE_TTL
+        ):
+            print(
+                "[Last.fm] popularity cache hit "
+                f"album={title} "
+                f"artist={artist}"
+            )
+
+            return popularity
+
+        del _popularity_cache[
+            cache_key
+        ]
+
     popularity_params = {
         "method": "album.getInfo",
         "api_key": LASTFM_API_KEY,
@@ -38,119 +96,95 @@ async def get_album_popularity(
         "format": "json",
     }
 
+    start = time.perf_counter()
+
     try:
-        async with httpx.AsyncClient() as client:
+        response = await LASTFM_CLIENT.get(
+            LASTFM_URL,
+            params=popularity_params,
+        )
 
-            response = await client.get(
-                LASTFM_URL,
-                params=popularity_params,
-                timeout=LASTFM_TIMEOUT,
-            )
+        response.raise_for_status()
 
-            response.raise_for_status()
+        data = response.json()
 
-            data = response.json()
+        if "error" in data:
+            return 0, 0
 
-            if "error" in data:
-                return 0, 0
+        album_data = data.get(
+            "album",
+            {},
+        )
 
-            album_data = data.get(
-                "album",
-                {},
-            )
-
-            try:
-                listeners = int(
-                    album_data.get(
-                        "listeners",
-                        0,
-                    )
+        try:
+            listeners = int(
+                album_data.get(
+                    "listeners",
+                    0,
                 )
-            except (TypeError, ValueError):
-                listeners = 0
+            )
+        except (TypeError, ValueError):
+            listeners = 0
 
-            try:
-                playcount = int(
-                    album_data.get(
-                        "playcount",
-                        0,
-                    )
+        try:
+            playcount = int(
+                album_data.get(
+                    "playcount",
+                    0,
                 )
-            except (TypeError, ValueError):
-                playcount = 0
+            )
+        except (TypeError, ValueError):
+            playcount = 0
 
-            return listeners, playcount
+        popularity = (
+            listeners,
+            playcount,
+        )
+
+        _popularity_cache[
+            cache_key
+        ] = (
+            time.time(),
+            popularity,
+        )
+
+        elapsed = (
+            time.perf_counter()
+            - start
+        )
+
+        print(
+            f"[TIMING] Last.fm popularity: "
+            f"{elapsed:.2f}s"
+        )
+
+        return popularity
 
     except httpx.TimeoutException:
-        print(
-            "[Last.fm] Album popularity request timed out."
+        elapsed = (
+            time.perf_counter()
+            - start
         )
+
+        print(
+            f"[Last.fm] Album popularity request "
+            f"timed out after {elapsed:.2f}s"
+        )
+
         return 0, 0
 
     except httpx.RequestError as exc:
+        elapsed = (
+            time.perf_counter()
+            - start
+        )
+
         print(
-            f"[Last.fm] Album popularity request failed: {exc}"
+            f"[Last.fm] Album popularity request "
+            f"failed after {elapsed:.2f}s: {exc}"
         )
+
         return 0, 0
-
-
-async def _get_album_popularity(
-    client: httpx.AsyncClient,
-    title: str,
-    artist: str,
-) -> tuple[int, int]:
-    """
-    Internal version used when fetching popularity
-    for multiple search results with a shared client.
-    """
-
-    popularity_params = {
-        "method": "album.getInfo",
-        "api_key": LASTFM_API_KEY,
-        "artist": artist,
-        "album": title,
-        "format": "json",
-    }
-
-    response = await client.get(
-        LASTFM_URL,
-        params=popularity_params,
-        timeout=LASTFM_TIMEOUT,
-    )
-
-    response.raise_for_status()
-
-    data = response.json()
-
-    if "error" in data:
-        return 0, 0
-
-    album_data = data.get(
-        "album",
-        {},
-    )
-
-    try:
-        listeners = int(
-            album_data.get(
-                "listeners",
-                0,
-            )
-        )
-    except (TypeError, ValueError):
-        listeners = 0
-
-    try:
-        playcount = int(
-            album_data.get(
-                "playcount",
-                0,
-            )
-        )
-    except (TypeError, ValueError):
-        playcount = 0
-
-    return listeners, playcount
 
 
 def _score_album(
@@ -209,9 +243,7 @@ def _rank_albums(
 
     scored = []
 
-    for position, album in enumerate(
-        albums
-    ):
+    for position, album in enumerate(albums):
         relevance_score = _score_album(
             album,
             query,
@@ -243,10 +275,71 @@ def _rank_albums(
 
 async def search_albums_lastfm(
     query: str,
-    include_popularity: bool = False,
 ) -> list[dict]:
+    """
+    Search Last.fm for albums.
+
+    This function intentionally performs only the
+    album.search request.
+
+    It does NOT:
+    - fetch album popularity
+    - call MusicBrainz
+    - call Cover Art Archive
+    """
 
     total_start = time.perf_counter()
+
+    if not LASTFM_API_KEY:
+        raise RuntimeError(
+            "LASTFM_API_KEY is not configured."
+        )
+
+    # --------------------------------------------------
+    # Normalize cache key
+    # --------------------------------------------------
+
+    cache_key = query.strip().casefold()
+
+    # --------------------------------------------------
+    # Search cache
+    # --------------------------------------------------
+
+    cached = _search_cache.get(
+        cache_key
+    )
+
+    if cached:
+        cached_at, results = cached
+
+        if (
+            time.time() - cached_at
+            < _SEARCH_CACHE_TTL
+        ):
+            total_time = (
+                time.perf_counter()
+                - total_start
+            )
+
+            print(
+                f"[Last.fm] search cache hit: "
+                f"{query}"
+            )
+
+            print(
+                f"[TIMING] Last.fm total: "
+                f"{total_time:.2f}s"
+            )
+
+            return results
+
+        del _search_cache[
+            cache_key
+        ]
+
+    # --------------------------------------------------
+    # Last.fm request
+    # --------------------------------------------------
 
     search_params = {
         "method": "album.search",
@@ -256,179 +349,113 @@ async def search_albums_lastfm(
         "limit": LASTFM_SEARCH_LIMIT,
     }
 
+    search_start = time.perf_counter()
+
     try:
+        response = await LASTFM_CLIENT.get(
+            LASTFM_URL,
+            params=search_params,
+        )
 
-        async with httpx.AsyncClient() as client:
+        response.raise_for_status()
 
-            # -------------------------
-            # Last.fm search
-            # -------------------------
+        data = response.json()
 
-            search_start = time.perf_counter()
+        search_time = (
+            time.perf_counter()
+            - search_start
+        )
 
-            response = await client.get(
-                LASTFM_URL,
-                params=search_params,
-                timeout=LASTFM_TIMEOUT,
+        if "error" in data:
+            raise RuntimeError(
+                data.get(
+                    "message",
+                    "Last.fm request failed.",
+                )
             )
 
-            response.raise_for_status()
+        results = data.get(
+            "results",
+            {},
+        ).get(
+            "albummatches",
+            {},
+        ).get(
+            "album",
+            [],
+        )
 
-            data = response.json()
+        valid_albums = []
 
-            search_time = (
-                time.perf_counter()
-                - search_start
+        for album in results:
+            title = album.get(
+                "name",
+                "",
             )
 
-            if "error" in data:
-                raise RuntimeError(
-                    data.get(
-                        "message",
-                        "Last.fm request failed.",
-                    )
-                )
-
-            results = data.get(
-                "results",
-                {},
-            ).get(
-                "albummatches",
-                {},
-            ).get(
-                "album",
-                [],
+            artist = album.get(
+                "artist",
+                "",
             )
 
-            valid_albums = []
+            if not title or not artist:
+                continue
 
-            for album in results:
-
-                title = album.get(
-                    "name",
-                    "",
-                )
-
-                artist = album.get(
-                    "artist",
-                    "",
-                )
-
-                if not title or not artist:
-                    continue
-
-                valid_albums.append(
-                    {
-                        "id": album.get(
-                            "mbid",
-                            "",
-                        ),
-                        "title": title,
-                        "artist": artist,
-                    }
-                )
-
-            # -------------------------
-            # Ranking
-            # -------------------------
-
-            ranked_albums = _rank_albums(
-                valid_albums,
-                query,
+            valid_albums.append(
+                {
+                    "id": album.get(
+                        "mbid",
+                        "",
+                    ),
+                    "title": title,
+                    "artist": artist,
+                }
             )
 
-            selected_albums = ranked_albums[
-                :LASTFM_RESULT_LIMIT
-            ]
+        # --------------------------------------------------
+        # Ranking
+        # --------------------------------------------------
 
-            # -------------------------
-            # Popularity
-            #
-            # Only enabled for a real
-            # album search/details flow.
-            #
-            # Autocomplete remains cheap.
-            # -------------------------
+        ranked_albums = _rank_albums(
+            valid_albums,
+            query,
+        )
 
-            if include_popularity:
+        selected_albums = ranked_albums[
+            :LASTFM_RESULT_LIMIT
+        ]
 
-                popularity_start = (
-                    time.perf_counter()
-                )
+        # --------------------------------------------------
+        # Store in cache
+        # --------------------------------------------------
 
-                popularity_results = (
-                    await asyncio.gather(
-                        *[
-                            _get_album_popularity(
-                                client,
-                                album["title"],
-                                album["artist"],
-                            )
-                            for album in selected_albums
-                        ],
-                        return_exceptions=True,
-                    )
-                )
+        _search_cache[
+            cache_key
+        ] = (
+            time.time(),
+            selected_albums,
+        )
 
-                popularity_time = (
-                    time.perf_counter()
-                    - popularity_start
-                )
+        # --------------------------------------------------
+        # Timing
+        # --------------------------------------------------
 
-                albums = []
+        total_time = (
+            time.perf_counter()
+            - total_start
+        )
 
-                for album, popularity in zip(
-                    selected_albums,
-                    popularity_results,
-                ):
+        print(
+            f"[TIMING] Last.fm search: "
+            f"{search_time:.2f}s"
+        )
 
-                    if isinstance(
-                        popularity,
-                        Exception,
-                    ):
-                        listeners = 0
-                        playcount = 0
+        print(
+            f"[TIMING] Last.fm total: "
+            f"{total_time:.2f}s"
+        )
 
-                    else:
-                        listeners, playcount = (
-                            popularity
-                        )
-
-                    albums.append(
-                        {
-                            **album,
-                            "listeners": listeners,
-                            "playcount": playcount,
-                        }
-                    )
-
-                selected_albums = albums
-
-                print(
-                    f"[TIMING] Last.fm popularity: "
-                    f"{popularity_time:.2f}s"
-                )
-
-            # -------------------------
-            # Timing
-            # -------------------------
-
-            total_time = (
-                time.perf_counter()
-                - total_start
-            )
-
-            print(
-                f"[TIMING] Last.fm search: "
-                f"{search_time:.2f}s"
-            )
-
-            print(
-                f"[TIMING] Last.fm total: "
-                f"{total_time:.2f}s"
-            )
-
-            return selected_albums
+        return selected_albums
 
     except httpx.TimeoutException:
         raise RuntimeError(

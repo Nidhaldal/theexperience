@@ -3,7 +3,7 @@ import {
   useRef,
   useState,
 } from 'react'
-import { searchAlbums } from '../services/albumApi'
+import { searchAlbums,getAlbumDetails } from '../services/albumApi'
 import type { Album } from '../types/album'
 import AlbumDetail from './AlbumDetail'
 import { useRecentAlbums } from '../hooks/useRecentAlbums'
@@ -184,63 +184,43 @@ function Discovery() {
    * -------------------------------------------------------
    */
 
-  async function selectAlbum(
-    album: Album,
-  ) {
-    setLoadingState('preparing')
+async function selectAlbum(
+  album: Album,
+) {
+  setLoadingState('preparing')
 
-    setAlbums([])
-    setActiveIndex(-1)
+  setAlbums([])
+  setActiveIndex(-1)
 
-    try {
-      const response = await searchAlbums(
-        album.title,
-        false,
-      )
+  try {
+    const fullAlbum =
+      await getAlbumDetails(album)
 
-      const fullAlbum =
-        response.results.find(
-          (result) =>
-            result.title.toLowerCase() ===
-              album.title.toLowerCase() &&
-            result.artist.toLowerCase() ===
-              album.artist.toLowerCase(),
-        ) ||
-        response.results[0]
+    addRecentAlbum(fullAlbum)
 
-      if (!fullAlbum) {
-        throw new Error(
-          'Album not found',
-        )
-      }
+    /*
+     * Small transition state gives the
+     * experience a deliberate handoff.
+     */
+    setIsTransitioning(true)
 
-      addRecentAlbum(fullAlbum)
+    setTimeout(() => {
+      setSelectedAlbum(fullAlbum)
+      setLoadingState(null)
+      setIsTransitioning(false)
+    }, 900)
+  } catch {
+    addRecentAlbum(album)
 
-      /*
-       * Small transition state gives the
-       * experience a deliberate handoff.
-       */
-      setIsTransitioning(true)
+    setIsTransitioning(true)
 
-      setTimeout(() => {
-        addRecentAlbum(fullAlbum)
-setSelectedAlbum(fullAlbum)
-setLoadingState(null)
-setIsTransitioning(false)
-      }, 900)
-    } catch {
-      addRecentAlbum(album)
-
-      setIsTransitioning(true)
-
-      setTimeout(() => {
-        setSelectedAlbum(album)
-        setLoadingState(null)
-        setIsTransitioning(false)
-      }, 900)
-    }
+    setTimeout(() => {
+      setSelectedAlbum(album)
+      setLoadingState(null)
+      setIsTransitioning(false)
+    }, 900)
   }
-
+}
 
   /*
    * -------------------------------------------------------

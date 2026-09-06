@@ -3,25 +3,31 @@ import time
 
 from app.schemas.album import Album
 from app.services.cover_art import get_cover_url
-from app.services.lastfm import search_albums_lastfm
-from app.services.musicbrainz import find_albums_by_ids
+from app.services.lastfm import (
+    get_album_popularity,
+    search_albums_lastfm,
+)
+from app.services.musicbrainz import find_album_by_id, find_album
 
 
 async def search_music(
     query: str,
     autocomplete: bool = True,
 ) -> list[Album]:
+    """
+    Lightweight album search.
+
+    This function intentionally does only Last.fm search.
+    It does not call MusicBrainz, Cover Art Archive,
+    or Last.fm popularity.
+    """
 
     total_start = time.perf_counter()
 
-    # -------------------------
-    # Last.fm
-    # -------------------------
     lastfm_start = time.perf_counter()
 
     lastfm_candidates = await search_albums_lastfm(
         query,
-        include_popularity=not autocomplete,
     )
 
     lastfm_time = (
@@ -34,207 +40,34 @@ async def search_music(
         f"{lastfm_time:.2f}s"
     )
 
-    # -------------------------
-    # Autocomplete
-    #
-    # Only return:
-    # - title
-    # - artist
-    # - Last.fm MBID when available
-    #
-    # No MusicBrainz.
-    # No Cover Art.
-    # No popularity requests.
-    # -------------------------
-    if autocomplete:
-
-        total_time = (
-            time.perf_counter()
-            - total_start
+    albums = [
+        Album(
+            id=album.get(
+                "id",
+                "",
+            ),
+            title=album.get(
+                "title",
+                "",
+            ),
+            artist=album.get(
+                "artist",
+                "",
+            ),
+            listeners=album.get(
+                "listeners",
+                0,
+            ),
+            playcount=album.get(
+                "playcount",
+                0,
+            ),
         )
-
-        print(
-            "[TIMING] search.py MusicBrainz: "
-            "SKIPPED (autocomplete)"
-        )
-
-        print(
-            "[TIMING] search.py Cover Art: "
-            "SKIPPED (autocomplete)"
-        )
-
-        print(
-            f"[TIMING] search.py TOTAL: "
-            f"{total_time:.2f}s"
-        )
-
-        return [
-            Album(
-                id=album.get("id", ""),
-                title=album.get("title", ""),
-                artist=album.get("artist", ""),
-                listeners=0,
-                playcount=0,
-            )
-            for album in lastfm_candidates
-            if album.get("title")
-            and album.get("artist")
-        ]
-
-    # -------------------------
-    # MusicBrainz
-    #
-    # Real search only.
-    # MusicBrainz enriches the
-    # Last.fm candidates with:
-    # - year
-    # - release_id
-    # - canonical MBID
-    # -------------------------
-    musicbrainz_start = time.perf_counter()
-
-    musicbrainz_albums = (
-        await find_albums_by_ids(
-            lastfm_candidates
-        )
-    )
-
-    musicbrainz_time = (
-        time.perf_counter()
-        - musicbrainz_start
-    )
-
-    print(
-        f"[TIMING] search.py MusicBrainz: "
-        f"{musicbrainz_time:.2f}s"
-    )
-
-    albums: list[Album] = []
-
-    for lastfm_album in lastfm_candidates:
-
-        title = lastfm_album.get(
-            "title",
-            "",
-        )
-
-        artist = lastfm_album.get(
-            "artist",
-            "",
-        )
-
-        lastfm_id = lastfm_album.get(
-            "id",
-            "",
-        )
-
-        if not title or not artist:
-            continue
-
-        # -------------------------
-        # MusicBrainz match
-        # -------------------------
-        musicbrainz_album = (
-            musicbrainz_albums.get(
-                lastfm_id
-            )
-        )
-
-        if musicbrainz_album:
-
-            # IMPORTANT:
-            # Keep the popularity data
-            # obtained from Last.fm.
-            musicbrainz_album.listeners = (
-                lastfm_album.get(
-                    "listeners",
-                    0,
-                )
-            )
-
-            musicbrainz_album.playcount = (
-                lastfm_album.get(
-                    "playcount",
-                    0,
-                )
-            )
-
-            albums.append(
-                musicbrainz_album
-            )
-
-        else:
-
-            # No MusicBrainz match.
-            # Still return the Last.fm
-            # result with its popularity.
-            albums.append(
-                Album(
-                    id=lastfm_id,
-                    title=title,
-                    artist=artist,
-                    listeners=lastfm_album.get(
-                        "listeners",
-                        0,
-                    ),
-                    playcount=lastfm_album.get(
-                        "playcount",
-                        0,
-                    ),
-                )
-            )
-
-    # -------------------------
-    # Cover Art
-    #
-    # Real search only.
-    # Fetch covers only for albums
-    # that have a MusicBrainz
-    # release_id.
-    # -------------------------
-    cover_start = time.perf_counter()
-
-    cover_targets = [
-        album
-        for album in albums
-        if album.release_id
+        for album in lastfm_candidates
+        if album.get("title")
+        and album.get("artist")
     ]
 
-    cover_results = await asyncio.gather(
-        *[
-            get_cover_url(
-                album.release_id
-            )
-            for album in cover_targets
-        ],
-        return_exceptions=True,
-    )
-
-    for album, result in zip(
-        cover_targets,
-        cover_results,
-    ):
-        if isinstance(
-            result,
-            Exception,
-        ):
-            continue
-
-        album.cover_url = result
-
-    cover_time = (
-        time.perf_counter()
-        - cover_start
-    )
-
-    print(
-        f"[TIMING] search.py Cover Art: "
-        f"{cover_time:.2f}s"
-    )
-
-    # -------------------------
-    # Total
-    # -------------------------
     total_time = (
         time.perf_counter()
         - total_start
@@ -246,3 +79,167 @@ async def search_music(
     )
 
     return albums
+
+
+async def get_album_details(
+    title: str,
+    artist: str,
+    musicbrainz_id: str | None = None,
+) -> Album:
+    """
+    Build the complete album experience for ONE album.
+
+    Flow:
+
+        Last.fm popularity
+              +
+        MusicBrainz resolution
+              ↓
+        Cover Art Archive
+              ↓
+        complete Album
+    """
+
+    total_start = time.perf_counter()
+
+    # --------------------------------------------------
+    # Last.fm popularity and MusicBrainz can start
+    # independently, so run them concurrently.
+    # --------------------------------------------------
+
+    lastfm_start = time.perf_counter()
+
+    popularity_task = asyncio.create_task(
+        get_album_popularity(
+            title,
+            artist,
+        )
+    )
+
+    # If Last.fm gave us a MusicBrainz ID, use it
+    # directly. That avoids a MusicBrainz search.
+    if musicbrainz_id:
+        musicbrainz_task = asyncio.create_task(
+            find_album_by_id(
+                musicbrainz_id,
+                title,
+                artist,
+            )
+        )
+    else:
+        # Fallback when Last.fm did not provide an MBID.
+        musicbrainz_task = asyncio.create_task(
+            find_album(
+                title,
+                artist,
+            )
+        )
+
+    (
+        popularity_result,
+        musicbrainz_album,
+    ) = await asyncio.gather(
+        popularity_task,
+        musicbrainz_task,
+    )
+
+    listeners, playcount = popularity_result
+
+    lastfm_time = (
+        time.perf_counter()
+        - lastfm_start
+    )
+
+    print(
+        f"[TIMING] search.py Last.fm popularity: "
+        f"{lastfm_time:.2f}s"
+    )
+
+    # --------------------------------------------------
+    # MusicBrainz result
+    # --------------------------------------------------
+
+    if musicbrainz_album is None:
+        print(
+            "[TIMING] search.py MusicBrainz: "
+            "no match"
+        )
+
+        total_time = (
+            time.perf_counter()
+            - total_start
+        )
+
+        print(
+            f"[TIMING] search.py TOTAL: "
+            f"{total_time:.2f}s"
+        )
+
+        return Album(
+            id=musicbrainz_id or "",
+            title=title,
+            artist=artist,
+            listeners=listeners,
+            playcount=playcount,
+        )
+
+    print(
+        "[TIMING] search.py MusicBrainz: "
+        "resolved"
+    )
+
+    # --------------------------------------------------
+    # Cover Art
+    #
+    # Cover Art Archive needs the MusicBrainz
+    # release ID, so this must happen after
+    # MusicBrainz resolution.
+    # --------------------------------------------------
+
+    cover_start = time.perf_counter()
+
+    cover_url = await get_cover_url(
+        musicbrainz_album.release_id
+        or musicbrainz_album.id
+    )
+
+    cover_time = (
+        time.perf_counter()
+        - cover_start
+    )
+
+    print(
+        f"[TIMING] search.py Cover Art: "
+        f"{cover_time:.2f}s"
+    )
+
+    # --------------------------------------------------
+    # Build final album
+    # --------------------------------------------------
+
+    final_album = Album(
+        id=musicbrainz_album.id,
+        title=musicbrainz_album.title,
+        artist=musicbrainz_album.artist,
+        year=musicbrainz_album.year,
+        listeners=listeners,
+        playcount=playcount,
+        cover_url=cover_url,
+        release_id=musicbrainz_album.release_id,
+    )
+
+    # --------------------------------------------------
+    # Total
+    # --------------------------------------------------
+
+    total_time = (
+        time.perf_counter()
+        - total_start
+    )
+
+    print(
+        f"[TIMING] search.py TOTAL: "
+        f"{total_time:.2f}s"
+    )
+
+    return final_album

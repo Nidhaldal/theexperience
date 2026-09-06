@@ -61,6 +61,14 @@ async def _request_musicbrainz(
     url: str,
     params: dict,
 ) -> dict:
+    """
+    Make a MusicBrainz request.
+
+    MusicBrainz is treated as a recoverable dependency.
+    If it fails, return an empty result instead of
+    crashing the entire album-details request.
+    """
+
     for attempt in range(2):
         await _wait_for_rate_limit()
 
@@ -72,7 +80,10 @@ async def _request_musicbrainz(
                 params=params,
             )
 
-            elapsed = time.perf_counter() - start
+            elapsed = (
+                time.perf_counter()
+                - start
+            )
 
             print(
                 f"[TIMING] MusicBrainz request: "
@@ -83,33 +94,66 @@ async def _request_musicbrainz(
                 return {}
 
             if response.status_code == 503:
+                print(
+                    "[MusicBrainz] "
+                    "Service unavailable."
+                )
+
                 if attempt == 0:
                     await asyncio.sleep(2)
                     continue
 
-                raise HTTPException(
-                    status_code=503,
-                    detail=(
-                        "MusicBrainz is temporarily unavailable. "
-                        "Please try again later."
-                    ),
+                return {}
+
+            if response.status_code >= 400:
+                print(
+                    "[MusicBrainz] "
+                    f"HTTP {response.status_code}"
                 )
 
-            response.raise_for_status()
+                return {}
 
             return response.json()
 
         except httpx.TimeoutException:
-            raise HTTPException(
-                status_code=504,
-                detail="MusicBrainz request timed out.",
+            elapsed = (
+                time.perf_counter()
+                - start
             )
 
-        except httpx.RequestError:
-            raise HTTPException(
-                status_code=503,
-                detail="Could not connect to MusicBrainz.",
+            print(
+                f"[MusicBrainz] request timed out "
+                f"after {elapsed:.2f}s"
             )
+
+            return {}
+
+        except httpx.RequestError as exc:
+            elapsed = (
+                time.perf_counter()
+                - start
+            )
+
+            print(
+                f"[MusicBrainz] request failed: "
+                f"{type(exc).__name__} "
+                f"after {elapsed:.2f}s"
+            )
+
+            return {}
+
+        except ValueError as exc:
+            elapsed = (
+                time.perf_counter()
+                - start
+            )
+
+            print(
+                f"[MusicBrainz] invalid JSON "
+                f"after {elapsed:.2f}s: {exc}"
+            )
+
+            return {}
 
     return {}
 
@@ -119,14 +163,23 @@ def _select_best_release_group(
     title: str,
     artist: str,
 ) -> dict | None:
-    normalized_title = normalize_text(title)
-    normalized_artist = normalize_artist(artist)
+
+    normalized_title = normalize_text(
+        title
+    )
+
+    normalized_artist = normalize_artist(
+        artist
+    )
 
     candidates = []
 
     for release_group in release_groups:
         release_group_title = normalize_text(
-            release_group.get("title", "")
+            release_group.get(
+                "title",
+                "",
+            )
         )
 
         artist_credit = release_group.get(
@@ -135,7 +188,10 @@ def _select_best_release_group(
         )
 
         release_group_artist = normalize_artist(
-            artist_credit[0].get("name", "")
+            artist_credit[0].get(
+                "name",
+                "",
+            )
             if artist_credit
             else ""
         )
@@ -152,7 +208,9 @@ def _select_best_release_group(
         ) != "Album":
             continue
 
-        candidates.append(release_group)
+        candidates.append(
+            release_group
+        )
 
     if not candidates:
         return None
@@ -160,7 +218,10 @@ def _select_best_release_group(
     return max(
         candidates,
         key=lambda release_group: (
-            release_group.get("score", 0),
+            release_group.get(
+                "score",
+                0,
+            ),
             release_group.get(
                 "first-release-date",
                 "",
@@ -172,6 +233,7 @@ def _select_best_release_group(
 async def find_albums_by_ids(
     lastfm_candidates: list[dict],
 ) -> dict[str, Album]:
+
     if not lastfm_candidates:
         return {}
 
@@ -190,15 +252,24 @@ async def find_albums_by_ids(
         *[
             find_album_by_id(
                 album["id"],
-                album.get("title", ""),
-                album.get("artist", ""),
+                album.get(
+                    "title",
+                    "",
+                ),
+                album.get(
+                    "artist",
+                    "",
+                ),
             )
             for album in candidates
         ],
         return_exceptions=True,
     )
 
-    elapsed = time.perf_counter() - start
+    elapsed = (
+        time.perf_counter()
+        - start
+    )
 
     print(
         f"[TIMING] MusicBrainz total: "
@@ -212,14 +283,18 @@ async def find_albums_by_ids(
         candidates,
         results,
     ):
-        if isinstance(result, Exception):
+        if isinstance(
+            result,
+            Exception,
+        ):
             continue
 
         if result:
-            albums[candidate["id"]] = result
+            albums[
+                candidate["id"]
+            ] = result
 
     return albums
-
 
 
 async def find_album_by_id(
@@ -227,25 +302,36 @@ async def find_album_by_id(
     fallback_title: str = "",
     fallback_artist: str = "",
 ) -> Album | None:
+    """
+    Resolve one album directly using a MusicBrainz ID.
+
+    This is the preferred path when Last.fm provides
+    an MBID because it avoids a MusicBrainz search.
+    """
+
     params = {
         "inc": "artist-credits+release-groups",
         "fmt": "json",
     }
 
-    url = f"{MUSICBRAINZ_RELEASE_URL}/{musicbrainz_id}"
+    url = (
+        f"{MUSICBRAINZ_RELEASE_URL}/"
+        f"{musicbrainz_id}"
+    )
 
     data = await _request_musicbrainz(
         url,
         params,
     )
 
+    # --------------------------------------------------
+    # MusicBrainz unavailable
+    #
+    # Return a fallback album instead of failing
+    # the entire request.
+    # --------------------------------------------------
+
     if not data:
-        # Do not perform another MusicBrainz request here.
-        #
-        # The Last.fm MBID is either invalid or unavailable.
-        # We already have the Last.fm title/artist, so returning
-        # a lightweight fallback is faster and avoids another
-        # rate-limited MusicBrainz request.
         if fallback_title and fallback_artist:
             return Album(
                 id=musicbrainz_id,
@@ -290,19 +376,22 @@ async def find_album_by_id(
             year = int(
                 release_date[:4]
             )
-        except ValueError:
+        except (
+            ValueError,
+            TypeError,
+        ):
             year = None
 
     release_group = data.get(
-        "release-group",
+        "release-group"
     )
 
     if isinstance(
         release_group,
         dict,
     ):
-        release_group_id = release_group.get(
-            "id"
+        release_group_id = (
+            release_group.get("id")
         )
 
         first_release_date = (
@@ -316,7 +405,10 @@ async def find_album_by_id(
                 year = int(
                     first_release_date[:4]
                 )
-            except ValueError:
+            except (
+                ValueError,
+                TypeError,
+            ):
                 pass
 
         if release_group_id:
@@ -341,6 +433,13 @@ async def find_album(
     title: str,
     artist: str,
 ) -> Album | None:
+    """
+    Find an album by title and artist.
+
+    This is the fallback path when Last.fm does not
+    provide a MusicBrainz ID.
+    """
+
     params = {
         "query": (
             f'releasegroup:"{title}" '
@@ -408,7 +507,10 @@ async def find_album(
             year = int(
                 first_release_date[:4]
             )
-        except ValueError:
+        except (
+            ValueError,
+            TypeError,
+        ):
             year = None
 
     release_params = {
