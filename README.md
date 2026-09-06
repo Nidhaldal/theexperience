@@ -119,6 +119,30 @@ The lighting system is intentionally separated from the color extraction layer s
 * MusicBrainz — music metadata and release information
 * Cover Art Archive — album artwork
 
+## Performance & Engineering
+
+The backend was designed to keep search lightweight while reserving deeper
+API enrichment for album selection.
+
+### Search
+
+* Last.fm is used as the primary search provider.
+* Autocomplete avoids MusicBrainz and Cover Art requests.
+* Search results are cached for 5 minutes.
+* Cached searches return in approximately 0.00s in local testing.
+* Uncached Last.fm searches typically complete in under ~1.5s in local testing.
+
+### Album Enrichment
+
+Selecting an album triggers deeper metadata enrichment:
+
+```text
+Last.fm popularity ──────┐
+                         ├── Concurrent requests
+MusicBrainz metadata ────┘
+             ↓
+        Cover Art
+
 ## Experience Preview
 
 TheExperience turns an album into a visual experience driven by its artwork and extracted color palette.
@@ -224,15 +248,17 @@ theexperience/
 
 ## API Flow
 
-The main search endpoint is exposed through FastAPI:
+The backend separates album discovery from album enrichment.
+
+### Search & Autocomplete
 
 ```text
-GET /albums/search
-```
+Search / Autocomplete
+        ↓
+      Last.fm
+        ↓
+Lightweight album results
 
-The backend coordinates the external services and returns normalized album objects to the frontends.
-
-For lightweight autocomplete requests, the application can use a reduced search path. Full album selection triggers deeper metadata enrichment and artwork retrieval.
 
 ## Color Extraction
 
