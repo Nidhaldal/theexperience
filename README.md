@@ -6,6 +6,12 @@
 
 The application combines music metadata, popularity data, album artwork, image analysis, and a custom lighting engine to transform album artwork into an interactive visual environment.
 
+## Engineering Article
+
+I wrote about the backend architecture and engineering decisions behind the multi-source music discovery pipeline:
+
+📖 **[Building a Fast Multi-Source Music Discovery Pipeline with FastAPI](https://dev.to/nidhaldal/building-a-fast-multi-source-music-discovery-pipeline-with-fastapi-3ai5)**
+
 ## ✨ Experience
 
 TheExperience has two frontend implementations sharing the same FastAPI backend:
@@ -111,7 +117,7 @@ The lighting system is intentionally separated from the color extraction layer s
 * Python
 * FastAPI
 * Pydantic
-* Async API services
+* Asynchronous HTTP API integration
 
 ### External APIs
 
@@ -142,6 +148,7 @@ Last.fm popularity ──────┐
 MusicBrainz metadata ────┘
              ↓
         Cover Art
+```
 
 ## Experience Preview
 
@@ -258,7 +265,7 @@ Search / Autocomplete
       Last.fm
         ↓
 Lightweight album results
-
+```
 
 ## Color Extraction
 
