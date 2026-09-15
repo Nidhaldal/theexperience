@@ -14,13 +14,7 @@ async def search_music(
     query: str,
     autocomplete: bool = True,
 ) -> list[Album]:
-    """
-    Lightweight album search.
-
-    This function intentionally does only Last.fm search.
-    It does not call MusicBrainz, Cover Art Archive,
-    or Last.fm popularity.
-    """
+   
 
     total_start = time.perf_counter()
 
@@ -61,6 +55,10 @@ async def search_music(
             playcount=album.get(
                 "playcount",
                 0,
+            ),
+            
+            cover_url=album.get(
+                "cover_url",
             ),
         )
         for album in lastfm_candidates

@@ -384,6 +384,7 @@ async def search_albums_lastfm(
             "album",
             [],
         )
+        
 
         valid_albums = []
 
@@ -401,17 +402,29 @@ async def search_albums_lastfm(
             if not title or not artist:
                 continue
 
+            images = album.get(
+                "image",
+                [],
+            )
+            cover_url = None
+            
+            for image in images:
+                if image.get("size") == "extralarge":
+                    cover_url = image.get("#text")
+                    break
             valid_albums.append(
                 {
-                    "id": album.get(
-                        "mbid",
-                        "",
+                     "id": album.get(
+                         "mbid",
+                         "",
                     ),
-                    "title": title,
-                    "artist": artist,
+                   "title": title,
+                   "artist": artist,
+                   "cover_url": cover_url,
                 }
             )
 
+                    
         # --------------------------------------------------
         # Ranking
         # --------------------------------------------------
