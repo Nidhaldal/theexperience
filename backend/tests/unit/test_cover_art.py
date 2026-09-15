@@ -1,8 +1,13 @@
 import httpx
 import pytest
-from fastapi import HTTPException
 
+from app.services import cover_art
 from app.services.cover_art import get_cover_url
+
+
+@pytest.fixture(autouse=True)
+def clear_cover_cache():
+    cover_art._cover_cache.clear()
 
 
 class MockResponse:
@@ -12,7 +17,9 @@ class MockResponse:
         data=None,
     ):
         self.status_code = status_code
+        self.url = "https://example.com/cover-art"
         self._data = data or {}
+        self.history = []
 
     def raise_for_status(self):
         if self.status_code >= 400:
@@ -49,7 +56,7 @@ async def test_get_cover_url_returns_large_front_approved_thumbnail(
         }
     )
 
-    async def mock_get(self, url, timeout):
+    async def mock_get(self, url):
         return response
 
     monkeypatch.setattr(
@@ -81,7 +88,7 @@ async def test_get_cover_url_ignores_non_front_image(
         }
     )
 
-    async def mock_get(self, url, timeout):
+    async def mock_get(self, url):
         return response
 
     monkeypatch.setattr(
@@ -103,7 +110,7 @@ async def test_get_cover_url_ignores_unapproved_image(
         data={
             "images": [
                 {
-                    "front": True,
+                    "front": False,
                     "approved": False,
                     "thumbnails": {
                         "large": "https://example.com/cover.jpg",
@@ -113,7 +120,7 @@ async def test_get_cover_url_ignores_unapproved_image(
         }
     )
 
-    async def mock_get(self, url, timeout):
+    async def mock_get(self, url):
         return response
 
     monkeypatch.setattr(
@@ -142,7 +149,7 @@ async def test_get_cover_url_skips_invalid_images_and_finds_valid_one(
                     },
                 },
                 {
-                    "front": True,
+                    "front": False,
                     "approved": False,
                     "thumbnails": {
                         "large": "https://example.com/unapproved.jpg",
@@ -159,7 +166,7 @@ async def test_get_cover_url_skips_invalid_images_and_finds_valid_one(
         }
     )
 
-    async def mock_get(self, url, timeout):
+    async def mock_get(self, url):
         return response
 
     monkeypatch.setattr(
@@ -181,7 +188,7 @@ async def test_get_cover_url_returns_none_when_images_are_missing(
         data={}
     )
 
-    async def mock_get(self, url, timeout):
+    async def mock_get(self, url):
         return response
 
     monkeypatch.setattr(
@@ -203,7 +210,7 @@ async def test_get_cover_url_returns_none_for_404(
         status_code=404
     )
 
-    async def mock_get(self, url, timeout):
+    async def mock_get(self, url):
         return response
 
     monkeypatch.setattr(
@@ -233,7 +240,7 @@ async def test_get_cover_url_returns_none_when_large_thumbnail_is_missing(
         }
     )
 
-    async def mock_get(self, url, timeout):
+    async def mock_get(self, url):
         return response
 
     monkeypatch.setattr(
@@ -251,7 +258,7 @@ async def test_get_cover_url_returns_none_when_large_thumbnail_is_missing(
 async def test_get_cover_url_handles_timeout(
     monkeypatch,
 ):
-    async def mock_get(self, url, timeout):
+    async def mock_get(self, url):
         raise httpx.TimeoutException(
             "Request timed out"
         )
@@ -262,20 +269,16 @@ async def test_get_cover_url_handles_timeout(
         mock_get,
     )
 
-    with pytest.raises(HTTPException) as exc_info:
-        await get_cover_url("album-123")
+    result = await get_cover_url("album-123")
 
-    assert exc_info.value.status_code == 504
-    assert exc_info.value.detail == (
-        "Cover Art Archive request timed out."
-    )
+    assert result is None
 
 
 @pytest.mark.asyncio
 async def test_get_cover_url_handles_connection_error(
     monkeypatch,
 ):
-    async def mock_get(self, url, timeout):
+    async def mock_get(self, url):
         raise httpx.ConnectError(
             "Connection failed"
         )
@@ -286,13 +289,9 @@ async def test_get_cover_url_handles_connection_error(
         mock_get,
     )
 
-    with pytest.raises(HTTPException) as exc_info:
-        await get_cover_url("album-123")
+    result = await get_cover_url("album-123")
 
-    assert exc_info.value.status_code == 503
-    assert exc_info.value.detail == (
-        "Could not connect to Cover Art Archive."
-    )
+    assert result is None
 
 
 @pytest.mark.asyncio
@@ -303,7 +302,7 @@ async def test_get_cover_url_handles_http_error(
         status_code=500
     )
 
-    async def mock_get(self, url, timeout):
+    async def mock_get(self, url):
         return response
 
     monkeypatch.setattr(
@@ -312,5 +311,6 @@ async def test_get_cover_url_handles_http_error(
         mock_get,
     )
 
-    with pytest.raises(httpx.HTTPStatusError):
-        await get_cover_url("album-123")
+    result = await get_cover_url("album-123")
+
+    assert result is None

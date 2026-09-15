@@ -18,7 +18,7 @@ def test_health_check():
 
 
 def test_search_returns_albums(monkeypatch):
-    async def mock_search_music(query):
+    async def mock_search_music(query, autocomplete=False):
         return [
             {
                 "id": "mb-123",
@@ -53,6 +53,7 @@ def test_search_returns_albums(monkeypatch):
                 "listeners": 1000,
                 "playcount": 5000,
                 "cover_url": "https://example.com/thriller.jpg",
+                "release_id": None,
             }
         ]
     }
@@ -61,7 +62,7 @@ def test_search_returns_albums(monkeypatch):
 def test_search_passes_query_to_service(monkeypatch):
     received_query = None
 
-    async def mock_search_music(query):
+    async def mock_search_music(query, autocomplete=False):
         nonlocal received_query
         received_query = query
         return []
@@ -82,7 +83,7 @@ def test_search_passes_query_to_service(monkeypatch):
 
 
 def test_search_returns_empty_results(monkeypatch):
-    async def mock_search_music(query):
+    async def mock_search_music(query, autocomplete=False):
         return []
 
     monkeypatch.setattr(
@@ -128,7 +129,7 @@ def test_search_rejects_missing_query_value():
 def test_search_raises_validation_error_for_invalid_response(
     monkeypatch,
 ):
-    async def mock_search_music(query):
+    async def mock_search_music(query, autocomplete=False):
         return [
             {
                 "id": "mb-123",
