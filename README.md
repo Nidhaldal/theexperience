@@ -6,6 +6,12 @@
 
 The application combines music metadata, popularity data, album artwork, image analysis, and a custom lighting engine to transform album artwork into an interactive visual environment.
 
+## 🚀 Live Demo
+
+[**→ Try TheExperience**](https://theexperience.vercel.app/)
+
+[**→ View Source Code**](https://github.com/Nidhaldal/theexperience)
+
 ## Engineering Article
 
 I wrote about the backend architecture and engineering decisions behind the multi-source music discovery pipeline:
